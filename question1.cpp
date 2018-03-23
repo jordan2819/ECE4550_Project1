@@ -77,6 +77,9 @@ int main(int argc, char *argv[]) {
 					tasks.at(i).left_to_execute = tasks.at(i).execution_time;
 					tasks.at(i).deadlines_missed++;
 				}
+				// If current running task missed deadline, update temp
+				if (shortest.id == tasks.at(i).id)
+					shortest = tasks.at(i);
 			}
 			task_reset = true;
 		}

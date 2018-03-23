@@ -26,7 +26,6 @@ struct Task{
 	int execution_time;
 	int period;
 	int deadline;
-	int left_to_execute;
 	bool completed;
 };
 
@@ -37,7 +36,7 @@ int main(int argc, char *argv[]) {
 		return false;
 	}
 	string line;
-	struct Task temp = { 0,0,0,0,0,false };
+	struct Task temp = { 0,0,0,0,0 };
 	vector<Task> tasks;
 	int simulation_time;
 	// Stores the number of tasks
@@ -48,7 +47,6 @@ int main(int argc, char *argv[]) {
 		getline(in, line, '\n');
 		std::istringstream iss(line);
 		iss >> temp.id >> temp.execution_time >> temp.period >> temp.deadline;
-		temp.left_to_execute = temp.execution_time;
 		tasks.push_back(temp);
 	}
 	// Stores the simulation time
@@ -59,64 +57,35 @@ int main(int argc, char *argv[]) {
 	ofstream out;
 	out.open("output1.txt");
 	bool task_occuring = false;
-	bool task_reset = false;
-	struct Task shortest = { -1,-1,32767,-1,-1,false };
+	struct Task shortest = { -1,-1,32767,-1,-1 };
 	int j = 1;
 	out << "***RM SCHEDULING***" << endl;
-	for (int current_time = 0; current_time <= simulation_time; current_time++) {
-		// Check if any task's periods have restarted.
-		for (unsigned int i = 0; i < tasks.size(); i++) {
-			if (current_time % tasks.at(i).period == 0) {
-				tasks.at(i).completed = false;
-				task_reset = true;
-			}
-		}
-		if (task_reset || !task_occuring) {
-			// Check for the shortest period task of those not completed
+	for (int current_time = 1; current_time <= simulation_time; current_time++) {
+		// If a task isn't occuring, find the shortest one that hasn't run
+		if (!task_occuring) {
 			for (unsigned int i = 0; i < tasks.size(); i++) {
 				if (tasks.at(i).period < shortest.period && !tasks.at(i).completed) {
 					shortest = tasks.at(i);
-					j = 1;
 				}
 			}
-			// There was a task that hasn't been completed, so start it
 			if (shortest.period != 32767)
 				task_occuring = true;
 		}
-		// See if task is running
-		if (task_occuring) {
-			// If not complete
-			if (j <= shortest.execution_time)
-				out << current_time << ": Task" << shortest.id << endl;
-			// Else, reset for next task
-			else {
-				task_occuring = false;
-				for (unsigned int i = 0; i < tasks.size(); i++) {
-					if (tasks.at(i).id == shortest.id) {
-						tasks.at(i).completed = true;
-					}
-				}
-				shortest = { -1,-1,32767,-1,-1,false };
-				j = 1;
-				// Check for the shortest period task of those not completed
-				for (unsigned int i = 0; i < tasks.size(); i++) {
-					if (tasks.at(i).period < shortest.period && !tasks.at(i).completed) {
-						shortest = tasks.at(i);
-					}
-				}
-				// There was a task that hasn't been completed, so start it
-				if (shortest.period != 32767) {
-					task_occuring = true;
-					out << current_time << ": Task" << shortest.id << endl;
+		if (task_occuring && j <= shortest.execution_time) {
+			out << current_time << ": Task" << shortest.id << endl;
+		}
+		// Reset for next task 
+		else {
+			task_occuring = false;
+			for (unsigned int i = 0; i < tasks.size(); i++) {
+				if (tasks.at(i).id == shortest.id) {
+					tasks.at(i).completed = true;
 				}
 			}
-		}
-		// All tasks currently completed and free time
-		if (!task_occuring) {
-			out << current_time << ":" << endl;
+			shortest = { -1,-1,32767,-1,-1 };
+			j = 1;
 		}
 		j++;
-		task_reset = false;
 	}
 	out.close();
 }

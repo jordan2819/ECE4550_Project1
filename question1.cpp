@@ -28,6 +28,8 @@ struct Task{
 	int deadline;
 	int left_to_execute;
 	bool completed;
+	int preemptions;
+	int deadlines_missed;
 };
 
 int main(int argc, char *argv[]) {
@@ -37,7 +39,7 @@ int main(int argc, char *argv[]) {
 		return false;
 	}
 	string line;
-	struct Task temp = { 0,0,0,0,0,false };
+	struct Task temp = { 0,0,0,0,0,false,0,0 };
 	vector<Task> tasks;
 	int simulation_time;
 	// Stores the number of tasks
@@ -60,9 +62,24 @@ int main(int argc, char *argv[]) {
 	out.open("output1.txt");
 	bool task_occuring = false;
 	bool task_reset = false;
-	struct Task shortest = { -1,-1,32767,-1,-1,false };
+	int total_preemptions = 0;
+	int total_deadlines_missed = 0;
+	int last_task_id = -1;
+	struct Task shortest = { -1,-1,32767,-1,-1,false,0,0 };
 	out << "***RM SCHEDULING***" << endl;
 	for (int current_time = 0; current_time <= simulation_time; current_time++) {
+		// Check if any task not complete will miss deadline
+		if(task_occuring) {
+			for (unsigned int i = 0; i < tasks.size(); i++) {
+				if (current_time % tasks.at(i).deadline == 0 && tasks.at(i).left_to_execute != 0) {
+					out << "TASK" << tasks.at(i).id << " MISSED DEADLINE" << endl;
+					total_deadlines_missed++;
+					tasks.at(i).left_to_execute = tasks.at(i).execution_time;
+					tasks.at(i).deadlines_missed++;
+				}
+			}
+			task_reset = true;
+		}
 		// Check if any task's periods have restarted.
 		for (unsigned int i = 0; i < tasks.size(); i++) {
 			if (current_time % tasks.at(i).period == 0) {
@@ -86,7 +103,20 @@ int main(int argc, char *argv[]) {
 		}
 		// See if task is running and not complete
 		if (task_occuring && shortest.left_to_execute != 0) {
-			out << current_time << ": Task" << shortest.id << endl;
+			// See if current task isn't the same as last task ran and a task was reset
+			// meaning potential preemption occurred.
+			if (last_task_id > 0 && task_reset && !tasks.at(last_task_id-1).completed && last_task_id != shortest.id) {
+				out << current_time << ": Task" << shortest.id << endl;
+				for (unsigned int i = 0; i < tasks.size(); i++) {
+					if (tasks.at(i).id == shortest.id) {
+						tasks.at(i).preemptions++;
+					}
+				}
+				total_preemptions++;
+			}
+			else
+				out << current_time << ": Task" << shortest.id << endl;
+			last_task_id = shortest.id;
 		}
 		// All tasks currently completed and free time
 		else if (!task_occuring) {
@@ -107,9 +137,18 @@ int main(int argc, char *argv[]) {
 					tasks.at(i).completed = true;
 				}
 			}
-			shortest = { -1,-1,32767,-1,-1,false };
+			shortest = { -1,-1,32767,-1,-1,false,0,0 };
 		}
 		task_reset = false;
+	}
+	// Print out summary
+	out << endl << "SUMMARY" << endl << "Total Deadlines Missed: " << total_deadlines_missed << endl;
+	for (unsigned int i = 0; i < tasks.size(); i++) {
+		out << "Task" << tasks.at(i).id << " Deadlines Missed: " << tasks.at(i).deadlines_missed << endl;
+	}
+	out << "Total Preemptions: " << total_preemptions << endl;
+	for (unsigned int i = 0; i < tasks.size(); i++) {
+		out << "Task" << tasks.at(i).id << " Preemptions: " << tasks.at(i).preemptions << endl;
 	}
 	out.close();
 }

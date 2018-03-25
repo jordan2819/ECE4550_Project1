@@ -75,17 +75,19 @@ int main(int argc, char *argv[]) {
 		// Check if any task not complete will miss deadline
 		if(task_occuring) {
 			for (unsigned int i = 0; i < tasks.size(); i++) {
-				if (current_time % tasks.at(i).deadline == 0 && tasks.at(i).left_to_execute != 0) {
+				// (D = T) Current time has reached deadline and not done executing
+				if ( current_time % (tasks.at(i).deadline + (current_time / tasks.at(i).period)
+					* tasks.at(i).period) == 0 && tasks.at(i).left_to_execute != 0) {
 					out << "TASK" << tasks.at(i).id << " MISSED DEADLINE" << endl;
 					total_deadlines_missed++;
 					tasks.at(i).left_to_execute = tasks.at(i).execution_time;
 					tasks.at(i).deadlines_missed++;
+					tasks.at(i).completed = true;
+					task_reset = true;
+					task_occuring = false;
+					shortest = { -1,-1,32767,-1,-1,32767,false,0,0 };
 				}
-				// If current running task missed deadline, update temp
-				if (shortest.id == tasks.at(i).id)
-					shortest = tasks.at(i);
 			}
-			task_reset = true;
 		}
 		// Check if any task's periods have restarted.
 		for (unsigned int i = 0; i < tasks.size(); i++) {
@@ -113,7 +115,7 @@ int main(int argc, char *argv[]) {
 			// See if current task isn't the same as last task ran and a task was reset
 			// meaning potential preemption occurred.
 			if (last_task_id > 0 && task_reset && !tasks.at(last_task_id-1).completed && last_task_id != shortest.id) {
-				out << current_time << ": Task" << shortest.id << endl;
+				out << current_time << ": Task" << shortest.id << " Preempted Task" << last_task_id << endl;
 				for (unsigned int i = 0; i < tasks.size(); i++) {
 					if (tasks.at(i).id == shortest.id) {
 						tasks.at(i).preemptions++;
@@ -167,22 +169,28 @@ int main(int argc, char *argv[]) {
 	total_deadlines_missed = 0;
 	last_task_id = -1;
 	shortest = { -1,-1,32767,-1,-1,32767,false,0,0 };
+	// Reset preemption and deadlines missed count
+	for (unsigned int i = 0; i < tasks.size(); i++) {
+		tasks.at(i).preemptions = 0;
+		tasks.at(i).deadlines_missed = 0;
+	}
 	out << endl << endl << "***EDF SCHEDULING***" << endl;
 	for (int current_time = 0; current_time <= simulation_time; current_time++) {
 		// Check if any task not complete will miss deadline
 		if (task_occuring) {
 			for (unsigned int i = 0; i < tasks.size(); i++) {
-				if (current_time % tasks.at(i).deadline == 0 && tasks.at(i).left_to_execute != 0) {
+				if (current_time % (tasks.at(i).deadline + (current_time / tasks.at(i).period)
+					* tasks.at(i).period) == 0 && tasks.at(i).left_to_execute != 0) {
 					out << "TASK" << tasks.at(i).id << " MISSED DEADLINE" << endl;
 					total_deadlines_missed++;
 					tasks.at(i).left_to_execute = tasks.at(i).execution_time;
 					tasks.at(i).deadlines_missed++;
+					tasks.at(i).completed = true;
+					task_reset = true;
+					task_occuring = false;
+					shortest = { -1,-1,32767,-1,-1,32767,false,0,0 };
 				}
-				// If current running task missed deadline, update temp
-				if (shortest.id == tasks.at(i).id)
-					shortest = tasks.at(i);
 			}
-			task_reset = true;
 		}
 		// Check if any task's periods have restarted.
 		for (unsigned int i = 0; i < tasks.size(); i++) {
@@ -211,7 +219,7 @@ int main(int argc, char *argv[]) {
 			// See if current task isn't the same as last task ran and a task was reset
 			// meaning potential preemption occurred.
 			if (last_task_id > 0 && task_reset && !tasks.at(last_task_id - 1).completed && last_task_id != shortest.id) {
-				out << current_time << ": Task" << shortest.id << endl;
+				out << current_time << ": Task" << shortest.id << " Preempted Task" << last_task_id << endl;
 				for (unsigned int i = 0; i < tasks.size(); i++) {
 					if (tasks.at(i).id == shortest.id) {
 						tasks.at(i).preemptions++;
@@ -240,7 +248,7 @@ int main(int argc, char *argv[]) {
 				if (current_time % tasks.at(i).deadline == 0)
 					tasks.at(i).time_to_deadline = tasks.at(i).deadline;
 				else
-					tasks.at(i).time_to_deadline = ((current_time / tasks.at(i).deadline) + 1) * tasks.at(i).deadline - current_time;
+					tasks.at(i).time_to_deadline = (tasks.at(i).deadline + (current_time / tasks.at(i).period) * tasks.at(i).period) - current_time;
 		}
 		// See if task that ran on this runthrough is completed
 		if (task_occuring && shortest.left_to_execute == 0) {

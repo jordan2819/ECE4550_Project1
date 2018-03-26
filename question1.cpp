@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 using std::cout;
 using std::endl;
@@ -32,6 +33,11 @@ struct Task{
 	int preemptions;
 	int deadlines_missed;
 };
+
+bool compareByID(const Task &a, const Task &b)
+{
+	return a.id < b.id;
+}
 
 int main(int argc, char *argv[]) {
 	ifstream in(argv[1]);
@@ -58,6 +64,7 @@ int main(int argc, char *argv[]) {
 	// Stores the simulation time
 	string junk;
 	in >> junk >> simulation_time;
+	std::sort(tasks.begin(), tasks.end(), compareByID);
 
 	/////////////////////////
 	// Begin Scheduling RM //
@@ -102,7 +109,7 @@ int main(int argc, char *argv[]) {
 		if (task_reset || !task_occuring) {
 			// Check for the shortest period task of those not completed
 			for (unsigned int i = 0; i < tasks.size(); i++) {
-				if (tasks.at(i).period < shortest.period && !tasks.at(i).completed) {
+				if (tasks.at(i).period < shortest.period && !tasks.at(i).completed && tasks.at(i).deadlines_missed < 1) {
 					shortest = tasks.at(i);
 				}
 			}
@@ -206,7 +213,7 @@ int main(int argc, char *argv[]) {
 		if (task_reset || !task_occuring) {
 			// Check for the task with the closest deadline of those not completed
 			for (unsigned int i = 0; i < tasks.size(); i++) {
-				if (tasks.at(i).time_to_deadline < shortest.time_to_deadline && !tasks.at(i).completed) {
+				if (tasks.at(i).time_to_deadline < shortest.time_to_deadline && !tasks.at(i).completed && tasks.at(i).deadlines_missed < 1) {
 					shortest = tasks.at(i);
 				}
 			}
